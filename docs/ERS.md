@@ -1,6 +1,6 @@
 # Especificación de Requisitos de Software (ERS)
 
-**Proyecto:** MiahuaReporta
+**Proyecto:** MiahuaFix
 **Versión:** 1.0
 **Estado:** Definición Inicial
 
@@ -12,7 +12,7 @@ Este documento de especificación de requisitos (ERS) servirá como la brújula 
 
 ## 1. Introducción
 
-MiahuaReporta es una solución integral para la gestión de incidencias urbanas. Su objetivo es cerrar la brecha de comunicación entre el ciudadano y la administración pública, permitiendo reportar problemas de baches, luminarias y basura mediante tecnología móvil.
+MiahuaFix es una solución integral para la gestión de incidencias urbanas. Su objetivo es cerrar la brecha de comunicación entre el ciudadano y la administración pública, permitiendo reportar problemas de baches, luminarias y basura mediante tecnología móvil.
 
 ---
 
