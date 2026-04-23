@@ -1,50 +1,99 @@
-# Welcome to your Expo app 👋
+# MiahuaReporta 📍
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**MiahuaReporta** es una solución integral para la gestión de incidencias urbanas en Miahuatlán. Su objetivo es cerrar la brecha de comunicación entre el ciudadano y la administración pública, permitiendo reportar problemas de **baches, luminarias y basura** mediante tecnología móvil.
 
-## Get started
+> Aplicación construida con [Expo](https://expo.dev) + React Native, respaldada por [Supabase](https://supabase.com) como backend.
 
-1. Install dependencies
+---
+
+## 🎯 Visión del Proyecto
+
+El proyecto se rige por el principio de **"No dejar a nadie atrás"**: la app debe ser usable por personas de todas las edades y capacidades, incluyendo adultos mayores o personas con discapacidades visuales o motrices leves.
+
+Consulta la [Especificación de Requisitos de Software (ERS)](./docs/ERS.md) para conocer el detalle completo de los requisitos funcionales, no funcionales y los principios de accesibilidad.
+
+---
+
+## ✨ Características principales
+
+- 📍 **Captura geográfica automática** — latitud y longitud vía GPS al iniciar un reporte.
+- 📷 **Evidencia visual** — fotografía en tiempo real o desde la galería.
+- 🗂️ **Categorización** — selección del tipo de incidencia (Bache, Luminaria, Basura).
+- ☁️ **Sincronización con Supabase** — datos en la base y fotos en Storage.
+- 🗺️ **Mapa de incidencias** — visualización interactiva de reportes cercanos.
+- ♿ **Accesibilidad WCAG AA** — alto contraste, fuentes dinámicas y compatibilidad con TalkBack/VoiceOver.
+
+---
+
+## 🛠️ Stack Tecnológico
+
+- **Framework:** Expo (~54) + React Native (0.81)
+- **Routing:** expo-router (file-based)
+- **Mapas:** react-native-maps
+- **Cámara y ubicación:** expo-camera, expo-image-picker, expo-location
+- **Backend:** Supabase (PostgreSQL + Storage + RLS)
+- **Lenguaje:** TypeScript
+
+---
+
+## 🚀 Empezar
+
+1. Instala las dependencias
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Inicia la app
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+En la salida encontrarás opciones para abrir la app en:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- [Development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Emulador de Android](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [Simulador de iOS](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Puedes empezar a desarrollar editando los archivos dentro del directorio **app**. Este proyecto usa [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 📁 Estructura del Proyecto
 
-```bash
-npm run reset-project
+```
+MiahuaFix/
+├── app/           # Pantallas y rutas (file-based routing)
+├── assets/        # Imágenes, fuentes e íconos
+└── docs/          # Documentación del proyecto
+    └── ERS.md     # Especificación de Requisitos de Software
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## 📋 Requisitos clave
 
-To learn more about developing your project with Expo, look at the following resources:
+| Tipo | ID | Resumen |
+|------|----|---------|
+| Funcional | RF-01 | Captura geográfica vía GPS |
+| Funcional | RF-02 | Evidencia visual (cámara/galería) |
+| Funcional | RF-03 | Categorización de incidencia |
+| Funcional | RF-04 | Sincronización con Supabase + Storage |
+| Funcional | RF-05 | Mapa de incidencias |
+| No Funcional | RNF-01 | Envío < 5s en redes 4G |
+| No Funcional | RNF-02 | Uptime 99.9% |
+| No Funcional | RNF-03 | Fidelidad visual con mockups |
+| No Funcional | RNF-04 | Row Level Security (RLS) en Supabase |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Detalles completos en [`docs/ERS.md`](./docs/ERS.md).
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## 📚 Aprende más
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Documentación de Expo](https://docs.expo.dev/)
+- [Tutorial de Expo](https://docs.expo.dev/tutorial/introduction/)
+- [Documentación de Supabase](https://supabase.com/docs)
+- [Guía de accesibilidad en React Native](https://reactnative.dev/docs/accessibility)

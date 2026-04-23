@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "postgis-skill": {
+      "source": "postgis/postgis",
+      "sourceType": "github",
+      "computedHash": "3282a624d1f0f8137df9b318089ddfdf69069150f926241da4397f687afbec81"
+    }
+  }
+}
