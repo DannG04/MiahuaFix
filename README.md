@@ -1,6 +1,6 @@
-# MiahuaReporta 📍
+# MiahuaFix 📍
 
-**MiahuaReporta** es una solución integral para la gestión de incidencias urbanas en Miahuatlán. Su objetivo es cerrar la brecha de comunicación entre el ciudadano y la administración pública, permitiendo reportar problemas de **baches, luminarias y basura** mediante tecnología móvil.
+**MiahuaFix** es una solución integral para la gestión de incidencias urbanas en Miahuatlán. Su objetivo es cerrar la brecha de comunicación entre el ciudadano y la administración pública, permitiendo reportar problemas de **baches, luminarias y basura** mediante tecnología móvil.
 
 > Aplicación construida con [Expo](https://expo.dev) + React Native, respaldada por [Supabase](https://supabase.com) como backend.
 
