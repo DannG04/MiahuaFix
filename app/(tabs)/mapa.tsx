@@ -4,6 +4,7 @@ import {
   RefreshControl, StyleSheet, Animated, Platform, StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
@@ -149,7 +150,8 @@ const pinStyles = StyleSheet.create({
 
 export default function ScreenHome() {
   const { colors, isDark, spacing, shadows } = useTheme();
-  const insets = useSafeAreaInsets();
+  const insets       = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
 
@@ -366,8 +368,11 @@ export default function ScreenHome() {
                     : { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.line },
                 ]}
               >
-                {f.severity && !active && (
-                  <View style={[styles.chipDot, { backgroundColor: SEVERITY_COLOR[f.severity] }]} />
+                {f.severity && (
+                  <View style={[
+                    styles.chipDot,
+                    { backgroundColor: SEVERITY_COLOR[f.severity], opacity: active ? 0 : 1 },
+                  ]} />
                 )}
                 <Text style={[styles.chipText, { color: active ? activeColor : colors.ink700 }]}>
                   {f.label}
@@ -400,7 +405,7 @@ export default function ScreenHome() {
 
       {/* ── Bottom sheet preview ── */}
       {displayedReportes.length > 0 && view === 'map' && (
-        <View style={[styles.sheet, { backgroundColor: colors.paper, borderColor: colors.line, ...shadows.lg, bottom: 90 + insets.bottom }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.paper, borderColor: colors.line, ...shadows.lg, bottom: tabBarHeight + 8 }]}>
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetLabel, { color: colors.ink500 }]}>Cerca de ti</Text>
             <View style={[styles.sheetDivider, { backgroundColor: colors.line }]} />
