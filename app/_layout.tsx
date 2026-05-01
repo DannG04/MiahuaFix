@@ -44,7 +44,7 @@ export default function RootLayout() {
       <Stack.Screen name="index"          options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)"         options={{ headerShown: false }} />
       <Stack.Screen name="onboarding"     options={{ headerShown: false }} />
-      <Stack.Screen name="nuevo-reporte"  options={{ presentation: 'modal', title: 'Nuevo reporte' }} />
+      <Stack.Screen name="nuevo-reporte"  options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="reporte/[id]"   options={{ title: 'Detalle' }} />
       <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
     </Stack>

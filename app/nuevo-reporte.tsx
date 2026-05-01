@@ -1,257 +1,283 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
-  Image,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
-import * as Location from 'expo-location';
-import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '@/src/lib/supabase';
+import { AnonBadge } from '@/src/components/primitives';
+import { StepDots } from '@/src/components/StepDots';
+import { ReportStep1 } from '@/src/components/ReportStep1';
+import { ReportStep2 } from '@/src/components/ReportStep2';
+import { useTheme } from '@/src/theme';
+import type { Category, Severity } from '@/src/types/report';
 
-type LocationState =
-  | { status: 'loading' }
-  | { status: 'ok'; lat: number; lng: number }
-  | { status: 'denied' };
+const { width: SCREEN_W } = Dimensions.get('window');
+const TOTAL_STEPS = 3;
 
 export default function NuevoReporte() {
   const router = useRouter();
-  const [location, setLocation] = useState<LocationState>({ status: 'loading' });
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [titulo, setTitulo] = useState('');
+  const { colors } = useTheme();
+
+  const [step, setStep] = useState(0);
+  const [tipo, setTipo] = useState<Category | null>(null);
+  const [severidad, setSeveridad] = useState<Severity | null>(null);
   const [descripcion, setDescripcion] = useState('');
-  const [enviando, setEnviando] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocation({ status: 'denied' });
-        return;
-      }
-      const { coords } = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      setLocation({ status: 'ok', lat: coords.latitude, lng: coords.longitude });
-    })();
-  }, []);
+  const translateX = useSharedValue(SCREEN_W);
+  const direction = useRef(1);
 
-  async function handleTakePhoto() {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permiso requerido', 'Se necesita permiso de cámara para tomar la foto.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.7 });
-    if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  function slideIn(dir: 1 | -1) {
+    translateX.value = dir * SCREEN_W;
+    translateX.value = withTiming(0, { duration: 200 });
+  }
+
+  function goNext() {
+    direction.current = 1;
+    setStep((s) => {
+      const next = s + 1;
+      slideIn(1);
+      return next;
+    });
+  }
+
+  function goBack() {
+    direction.current = -1;
+    setStep((s) => {
+      const prev = s - 1;
+      slideIn(-1);
+      return prev;
+    });
+  }
+
+  function handleClose() {
+    const hasDatos = tipo || severidad || descripcion.trim() || tags.length > 0;
+    if (hasDatos) {
+      Alert.alert(
+        'Descartar reporte',
+        '¿Seguro que quieres cerrar? Los datos ingresados se perderán.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Descartar', style: 'destructive', onPress: () => router.back() },
+        ],
+      );
+    } else {
+      router.back();
     }
   }
 
-  async function handleEnviar() {
-    if (!titulo.trim()) {
-      Alert.alert('Campo requerido', 'Ingresa un título para el reporte.');
-      return;
-    }
-    if (!photoUri) {
-      Alert.alert('Foto requerida', 'Toma una foto de la incidencia antes de enviar.');
-      return;
-    }
-    if (location.status !== 'ok') {
-      Alert.alert('Ubicación no disponible', 'Espera a que se obtenga tu ubicación.');
-      return;
-    }
-
-    setEnviando(true);
-    try {
-      // 1. Subir foto a Storage
-      const fileName = `reporte_${Date.now()}.jpg`;
-      const response = await fetch(photoUri);
-      const arrayBuffer = await response.arrayBuffer();
-
-      const { error: uploadError } = await supabase.storage
-        .from('evidencias-reportes')
-        .upload(fileName, arrayBuffer, { contentType: 'image/jpeg', upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      // 2. Obtener URL pública
-      const { data: { publicUrl } } = supabase.storage
-        .from('evidencias-reportes')
-        .getPublicUrl(fileName);
-
-      // 3. Insertar en la tabla reportes
-      const { error: insertError } = await supabase.from('reportes').insert({
-        titulo: titulo.trim(),
-        descripcion: descripcion.trim() || null,
-        foto_url: publicUrl,
-        ubicacion: `SRID=4326;POINT(${location.lng} ${location.lat})`,
-      });
-
-      if (insertError) throw insertError;
-
-      Alert.alert('Reporte exitoso', 'Tu reporte fue enviado correctamente.', [
-        { text: 'OK', onPress: () => router.replace('/') },
-      ]);
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Ocurrió un error al enviar el reporte.');
-    } finally {
-      setEnviando(false);
-    }
-  }
+  const stepLabels = ['Categoría', 'Detalles', 'Foto'];
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={[styles.root, { backgroundColor: colors.ivory }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-
-        {/* Ubicación */}
-        {location.status === 'loading' && (
-          <View style={styles.row}>
-            <ActivityIndicator size="small" color="#2563EB" />
-            <Text style={styles.hint}>  Obteniendo ubicación...</Text>
-          </View>
-        )}
-        {location.status === 'ok' && (
-          <Text style={styles.coords}>
-            📍 {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-          </Text>
-        )}
-        {location.status === 'denied' && (
-          <Text style={styles.error}>
-            Permiso de ubicación denegado. Actívalo en la configuración del dispositivo.
-          </Text>
-        )}
-
-        {/* Título */}
-        <TextInput
-          style={styles.input}
-          placeholder="Título del reporte *"
-          placeholderTextColor="#9CA3AF"
-          value={titulo}
-          onChangeText={setTitulo}
-          maxLength={120}
-        />
-
-        {/* Descripción */}
-        <TextInput
-          style={[styles.input, styles.inputMultiline]}
-          placeholder="Descripción opcional"
-          placeholderTextColor="#9CA3AF"
-          value={descripcion}
-          onChangeText={setDescripcion}
-          multiline
-          numberOfLines={4}
-          maxLength={500}
-        />
-
-        {/* Botón cámara + miniatura */}
-        <TouchableOpacity style={styles.buttonSecondary} onPress={handleTakePhoto}>
-          <Text style={styles.buttonSecondaryText}>
-            {photoUri ? 'Volver a tomar foto' : 'Tomar Foto'}
-          </Text>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.line }]}>
+        <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.7}>
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M18 6 6 18M6 6l12 12"
+              stroke={colors.ink700}
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
+          </Svg>
         </TouchableOpacity>
 
-        {photoUri && (
-          <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
-        )}
+        <Text style={[styles.stepTitle, { color: colors.ink700 }]}>
+          Paso {step + 1} de {TOTAL_STEPS}
+        </Text>
 
-        {/* Enviar */}
-        <TouchableOpacity
-          style={[styles.buttonPrimary, enviando && styles.buttonDisabled]}
-          onPress={handleEnviar}
-          disabled={enviando}
+        <AnonBadge compact />
+      </View>
+
+      {/* StepDots */}
+      <View style={styles.dotsWrap}>
+        <StepDots step={step} total={TOTAL_STEPS} />
+      </View>
+
+      {/* Step content */}
+      <Animated.View style={[styles.stepWrap, animStyle]}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {enviando
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.buttonPrimaryText}>Enviar Reporte</Text>
-          }
-        </TouchableOpacity>
-
-      </ScrollView>
+          {step === 0 && (
+            <ReportStep1
+              selected={tipo}
+              setSelected={setTipo}
+              onNext={goNext}
+            />
+          )}
+          {step === 1 && (
+            <ReportStep2
+              severity={severidad}
+              setSeverity={setSeveridad}
+              descripcion={descripcion}
+              setDescripcion={setDescripcion}
+              tags={tags}
+              setTags={setTags}
+              onNext={goNext}
+              onBack={goBack}
+            />
+          )}
+          {step === 2 && (
+            <StepThreePlaceholder
+              onBack={goBack}
+              tipo={tipo}
+              severidad={severidad}
+              descripcion={descripcion}
+              tags={tags}
+              colors={colors}
+            />
+          )}
+        </ScrollView>
+      </Animated.View>
     </KeyboardAvoidingView>
   );
 }
 
+function StepThreePlaceholder({
+  onBack,
+  tipo,
+  severidad,
+  descripcion,
+  tags,
+  colors,
+}: {
+  onBack: () => void;
+  tipo: Category | null;
+  severidad: Severity | null;
+  descripcion: string;
+  tags: string[];
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  return (
+    <View style={s3.container}>
+      <Text style={[s3.title, { color: colors.ink900 }]}>Foto y ubicación.</Text>
+      <Text style={[s3.subtitle, { color: colors.ink500 }]}>
+        Paso 3 — pendiente (issue #14).
+      </Text>
+      <View style={[s3.summaryBox, { backgroundColor: colors.paper, borderColor: colors.line }]}>
+        <Text style={[s3.summaryRow, { color: colors.ink700 }]}>Categoría: {tipo}</Text>
+        <Text style={[s3.summaryRow, { color: colors.ink700 }]}>Severidad: {severidad}</Text>
+        {descripcion ? (
+          <Text style={[s3.summaryRow, { color: colors.ink700 }]}>Descripción: {descripcion}</Text>
+        ) : null}
+        {tags.length > 0 ? (
+          <Text style={[s3.summaryRow, { color: colors.ink700 }]}>Tags: {tags.join(', ')}</Text>
+        ) : null}
+      </View>
+      <TouchableOpacity
+        onPress={onBack}
+        activeOpacity={0.85}
+        style={[s3.backBtn, { backgroundColor: colors.ivory, borderColor: colors.line }]}
+      >
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M19 12H5m6-6-6 6 6 6"
+            stroke={colors.ink900}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+        <Text style={[s3.backText, { color: colors.ink700 }]}>Volver</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 16,
-    backgroundColor: '#fff',
-    flexGrow: 1,
+  root: {
+    flex: 1,
   },
-  row: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
   },
-  hint: {
-    fontSize: 14,
-    color: '#6B7280',
+  closeBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  coords: {
+  stepTitle: {
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
-    color: '#6B7280',
   },
-  error: {
+  dotsWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  stepWrap: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+    flexGrow: 1,
+  },
+});
+
+const s3 = StyleSheet.create({
+  container: { flex: 1 },
+  title: {
+    fontFamily: 'InstrumentSerif_400Regular',
+    fontSize: 28,
+    lineHeight: 30,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: '#DC2626',
+    marginBottom: 24,
   },
-  input: {
+  summaryBox: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    padding: 16,
+    gap: 6,
+    marginBottom: 24,
   },
-  inputMultiline: {
-    height: 100,
-    textAlignVertical: 'top',
+  summaryRow: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
   },
-  buttonSecondary: {
-    borderWidth: 1.5,
-    borderColor: '#2563EB',
-    borderRadius: 12,
-    paddingVertical: 13,
+  backBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  buttonSecondaryText: {
-    color: '#2563EB',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  preview: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
+    gap: 8,
+    height: 52,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    justifyContent: 'center',
   },
-  buttonPrimary: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonPrimaryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+  backText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
   },
 });
