@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import type { Database } from '@/src/types/database';
 
 export type Notificacion = Database['public']['Tables']['notificaciones']['Row'];
 
+let instanceCount = 0;
+
 export function useNotificaciones(anonId: string | null) {
+  const channelName = useRef(`useNotificaciones:${++instanceCount}`).current;
+
   const [data,        setData]        = useState<Notificacion[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading,     setLoading]     = useState(true);
@@ -32,6 +36,31 @@ export function useNotificaciones(anonId: string | null) {
     }
   }, [anonId]);
 
+  // Always point to the latest fetch without adding it as a subscription dep
+  const fetchRef = useRef(fetch);
+  useEffect(() => { fetchRef.current = fetch; }, [fetch]);
+
+  // Re-fetch when anonId / filters change
+  useEffect(() => { fetch(); }, [fetch]);
+
+  // Realtime subscription — only re-subscribes when anonId changes, not on every fetch update
+  useEffect(() => {
+    if (!anonId) return;
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notificaciones', filter: `anon_id=eq.${anonId}` },
+        () => { fetchRef.current(); },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  // channelName is a stable ref value, anonId drives the filter
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anonId]);
+
   const marcarLeida = useCallback(async (id: string) => {
     const { error: err } = await supabase
       .from('notificaciones')
@@ -57,22 +86,6 @@ export function useNotificaciones(anonId: string | null) {
       setUnreadCount(0);
     }
   }, [anonId]);
-
-  useEffect(() => {
-    fetch();
-    if (!anonId) return;
-
-    const channel = supabase
-      .channel(`useNotificaciones:${anonId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notificaciones', filter: `anon_id=eq.${anonId}` },
-        () => { fetch(); },
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [fetch, anonId]);
 
   return { data, unreadCount, loading, error, marcarLeida, marcarTodasLeidas, refetch: fetch };
 }

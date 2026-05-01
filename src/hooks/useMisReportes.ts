@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import type { Database } from '@/src/types/database';
 
 export type Reporte = Database['public']['Tables']['reportes']['Row'];
 
-// anonId comes from useAnonId (issue 09). Pass null while loading.
+let instanceCount = 0;
+
 export function useMisReportes(anonId: string | null) {
+  const channelName = useRef(`useMisReportes:${++instanceCount}`).current;
+
   const [data,    setData]    = useState<Reporte[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<Error | null>(null);
@@ -30,21 +33,28 @@ export function useMisReportes(anonId: string | null) {
     }
   }, [anonId]);
 
+  const fetchRef = useRef(fetch);
+  useEffect(() => { fetchRef.current = fetch; }, [fetch]);
+
+  // Re-fetch when anonId changes
+  useEffect(() => { fetch(); }, [fetch]);
+
+  // Realtime subscription — only re-subscribes when anonId changes
   useEffect(() => {
-    fetch();
     if (!anonId) return;
 
     const channel = supabase
-      .channel(`useMisReportes:${anonId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reportes', filter: `anon_id=eq.${anonId}` },
-        () => { fetch(); },
+        () => { fetchRef.current(); },
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [fetch, anonId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anonId]);
 
   return { data, loading, error, refetch: fetch };
 }

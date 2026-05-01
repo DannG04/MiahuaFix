@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/src/lib/supabase';
-
-let instanceCount = 0;
 import type { Database, CategoriaReporte, SeveridadReporte } from '@/src/types/database';
 
 export type Reporte = Database['public']['Tables']['reportes']['Row'];
@@ -15,8 +13,11 @@ export type ReportesFilters = {
   limit?:        number;
 };
 
+let instanceCount = 0;
+
 export function useReportes(filters: ReportesFilters = {}) {
   const channelName = useRef(`useReportes:${++instanceCount}`).current;
+
   const [data,    setData]    = useState<Reporte[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<Error | null>(null);
@@ -61,18 +62,25 @@ export function useReportes(filters: ReportesFilters = {}) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtersKey]);
 
-  useEffect(() => {
-    fetch();
+  const fetchRef = useRef(fetch);
+  useEffect(() => { fetchRef.current = fetch; }, [fetch]);
 
+  // Re-fetch when filters change
+  useEffect(() => { fetch(); }, [fetch]);
+
+  // Realtime subscription — created once per hook instance, uses fetchRef to stay current
+  useEffect(() => {
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reportes' }, () => {
-        fetch();
+        fetchRef.current();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [fetch]);
+  // channelName is stable — intentionally run once
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { data, loading, error, refetch: fetch };
 }
