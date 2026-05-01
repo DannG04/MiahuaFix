@@ -1,37 +1,16 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Redirect } from 'expo-router';
+import { hasOnboarded } from '@/src/lib/anonId';
 
-export default function Home() {
-  const router = useRouter();
+export default function Root() {
+  const [destination, setDestination] = useState<'/(tabs)/mapa' | '/onboarding' | null>(null);
 
-  return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push('/nuevo-reporte')}
-      >
-        <Text style={styles.buttonText}>Reportar Incidencia</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  useEffect(() => {
+    hasOnboarded().then((done) => {
+      setDestination(done ? '/(tabs)/mapa' : '/onboarding');
+    });
+  }, []);
+
+  if (!destination) return null;
+  return <Redirect href={destination} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 12,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-});

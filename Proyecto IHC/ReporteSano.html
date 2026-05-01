@@ -1,0 +1,328 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>ReporteCiudad — App de reporte anónimo de problemas urbanos</title>
+  <meta name="viewport" content="width=1400"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="components/ios-frame.jsx"></script>
+  <script type="text/babel" src="components/browser-window.jsx"></script>
+  <script type="text/babel" src="components/primitives.jsx"></script>
+  <script type="text/babel" src="components/screens-mobile-1.jsx"></script>
+  <script type="text/babel" src="components/screens-mobile-2.jsx"></script>
+  <script type="text/babel" src="components/screens-mobile-3.jsx"></script>
+  <script type="text/babel" src="components/rubric-screen.jsx"></script>
+  <script type="text/babel" src="components/dashboard.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Tweak defaults (editable by tweaks panel)
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "theme": "light",
+      "accent": "mint",
+      "homeView": "map",
+      "showDashboard": true
+    }/*EDITMODE-END*/;
+
+    function readSaved() {
+      try { return JSON.parse(localStorage.getItem('reportesano-tweaks')) || {}; } catch (e) { return {}; }
+    }
+
+    const accentMap = {
+      amber:  { c500: '#f59e0b', c600: '#d97706' },
+      coral:  { c500: '#f97066', c600: '#e54849' },
+      mint:   { c500: '#34d399', c600: '#059669' },
+      sky:    { c500: '#38bdf8', c600: '#0284c7' },
+    };
+
+    function App() {
+      const saved = readSaved();
+      const initial = { ...TWEAK_DEFAULTS, ...saved };
+      const [theme, setTheme] = useState(initial.theme);
+      const [accent, setAccent] = useState(initial.accent);
+      const [homeView, setHomeView] = useState(initial.homeView);
+      const [showDashboard, setShowDashboard] = useState(initial.showDashboard);
+      const [tweaksOpen, setTweaksOpen] = useState(false);
+
+      // Report flow state (persisted between screens so flow feels continuous)
+      const [flowStep, setFlowStep] = useState(0);
+      const [flowType, setFlowType] = useState('bano');
+      const [flowSeverity, setFlowSeverity] = useState('high');
+      const [flowNotes, setFlowNotes] = useState('');
+
+      const dark = theme === 'dark';
+
+      // Apply theme
+      useEffect(() => {
+        document.body.classList.toggle('theme-dark', dark);
+        const a = accentMap[accent];
+        document.documentElement.style.setProperty('--amber-500', a.c500);
+        document.documentElement.style.setProperty('--amber-600', a.c600);
+      }, [dark, accent]);
+
+      // Edit mode protocol
+      useEffect(() => {
+        const handler = (e) => {
+          if (e.data?.type === '__activate_edit_mode') setTweaksOpen(true);
+          if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
+        };
+        window.addEventListener('message', handler);
+        window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+        return () => window.removeEventListener('message', handler);
+      }, []);
+
+      const saveTweak = (key, val) => {
+        const cur = readSaved();
+        const next = { ...cur, [key]: val };
+        localStorage.setItem('reportesano-tweaks', JSON.stringify(next));
+        window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
+      };
+
+      const updateTheme = (t) => { setTheme(t); saveTweak('theme', t); };
+      const updateAccent = (a) => { setAccent(a); saveTweak('accent', a); };
+      const updateView = (v) => { setHomeView(v); saveTweak('homeView', v); };
+      const updateDash = (v) => { setShowDashboard(v); saveTweak('showDashboard', v); };
+
+      const deviceProps = { width: 360, height: 780, dark };
+
+      // Screen list
+      const screens = [
+        { label: '01 · Onboarding', tag: 'Bienvenida', inner: <ScreenOnboarding dark={dark}/> },
+        { label: '02 · Home', tag: 'Mapa y feed', inner: <div style={{ height: '100%', position: 'relative' }}>
+            <ScreenHome dark={dark} view={homeView} setView={updateView} onSelectReport={() => {}}/>
+            <TabBar active="home" dark={dark}/>
+          </div> },
+        { label: '03 · Nuevo reporte', tag: 'Categoría', inner: <ScreenReportFlow dark={dark} step={0} setStep={() => {}} selected="bano" setSelected={() => {}} severity="high" setSeverity={() => {}} notes="" setNotes={() => {}} onClose={() => {}}/> },
+        { label: '04 · Descripción', tag: 'Severidad + nota', inner: <ScreenReportFlow dark={dark} step={1} setStep={() => {}} selected="bano" setSelected={() => {}} severity="high" setSeverity={() => {}} notes="" setNotes={() => {}} onClose={() => {}}/> },
+        { label: '05 · Foto + ubic.', tag: 'Evidencia', inner: <ScreenReportFlow dark={dark} step={2} setStep={() => {}} selected="bano" setSelected={() => {}} severity="high" setSeverity={() => {}} notes="" setNotes={() => {}} onClose={() => {}}/> },
+        { label: '06 · Enviado', tag: 'Confirmación', inner: <ScreenReportFlow dark={dark} step={3} setStep={() => {}} selected="bano" setSelected={() => {}} severity="high" setSeverity={() => {}} notes="" setNotes={() => {}} onClose={() => {}}/> },
+        { label: '07 · Detalle', tag: 'Reporte público', inner: <ScreenDetail dark={dark} onBack={() => {}}/> },
+        { label: '08 · Comunidad', tag: 'Feed', inner: <div style={{ height: '100%', position: 'relative' }}>
+            <ScreenFeed dark={dark}/>
+            <TabBar active="feed" dark={dark}/>
+          </div> },
+        { label: '09 · Mis reportes', tag: 'Historial', inner: <div style={{ height: '100%', position: 'relative' }}>
+            <ScreenMine dark={dark}/>
+            <TabBar active="mine" dark={dark}/>
+          </div> },
+        { label: '10 · Notificaciones', tag: 'Avisos', inner: <ScreenNotifications dark={dark}/> },
+        { label: '11 · Perfil', tag: 'Ajustes', inner: <div style={{ height: '100%', position: 'relative' }}>
+            <ScreenProfile dark={dark} toggleDark={() => updateTheme(dark ? 'light' : 'dark')}/>
+            <TabBar active="profile" dark={dark}/>
+          </div> },
+      ];
+
+      return (
+        <div className="app-shell" data-screen-label="App — ReporteSano">
+          {/* Header */}
+          <div className="app-header">
+            <div className="brand">
+              <div className="brand-mark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                  <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <div className="brand-name">ReporteCiudad</div>
+                <div className="brand-sub">App de reporte anónimo · Problemas urbanos</div>
+              </div>
+            </div>
+            <div className="header-meta">
+              <div className="meta-col">
+                <span>Contexto</span>
+                <b>Ciudad / Colonia</b>
+              </div>
+              <div className="meta-col">
+                <span>Versión</span>
+                <b>0.3 · Abril 2026</b>
+              </div>
+              <div className="meta-col">
+                <span>Tema</span>
+                <div className="seg" style={{ marginTop: 2 }}>
+                  <button className={!dark ? 'active' : ''} onClick={() => updateTheme('light')}>Claro</button>
+                  <button className={dark ? 'active' : ''} onClick={() => updateTheme('dark')}>Oscuro</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Intro */}
+          <div style={{ maxWidth: 720, marginBottom: 44 }}>
+            <p style={{ fontFamily: 'Instrument Serif, serif', fontSize: 28, lineHeight: 1.25, margin: 0, color: 'var(--navy-800)', letterSpacing: '-0.01em', textWrap: 'pretty' }}>
+              Un prototipo interactivo para reportar en 30 segundos baches, basura acumulada, alumbrado dañado, fugas de agua y drenaje en tu colonia — sin crear cuenta, sin dar tu nombre.
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--ink-500)', marginTop: 14, lineHeight: 1.55, maxWidth: 620 }}>
+              Abajo encontrarás las 11 pantallas principales de la app móvil, un dashboard web para el ayuntamiento, y una pantalla de autoevaluación contra la rúbrica UX/UI. Usa los Tweaks (abajo a la derecha) para cambiar tema y acento.
+            </p>
+          </div>
+
+          {/* Section 1: Mobile screens */}
+          <div className="section">
+            <div className="section-head">
+              <span className="section-num">01</span>
+              <h2 className="section-title">Flujo móvil</h2>
+              <p className="section-desc">iOS · 11 pantallas. Onboarding, mapa, reporte en 3 pasos, detalle, comunidad, historial, avisos y perfil.</p>
+            </div>
+
+            {/* Carousel wrapper */}
+            {(() => {
+              const scrollRef = React.useRef(null);
+              const [canLeft, setCanLeft] = React.useState(false);
+              const [canRight, setCanRight] = React.useState(true);
+              const STEP = 440;
+              const onScroll = () => {
+                const el = scrollRef.current;
+                if (!el) return;
+                setCanLeft(el.scrollLeft > 4);
+                setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+              };
+              const scroll = (dir) => {
+                const el = scrollRef.current;
+                if (!el) return;
+                el.scrollBy({ left: dir * STEP, behavior: 'smooth' });
+              };
+              return (
+                <div style={{ position: 'relative' }}>
+                  {/* Left arrow */}
+                  <button onClick={() => scroll(-1)} style={{
+                    position: 'absolute', left: -20, top: '45%', transform: 'translateY(-50%)',
+                    zIndex: 20, width: 44, height: 44, borderRadius: '50%',
+                    background: '#0f1e3d', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 6px 20px rgba(10,21,48,0.2)',
+                    opacity: canLeft ? 1 : 0, pointerEvents: canLeft ? 'auto' : 'none',
+                    transition: 'opacity .2s',
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  {/* Right arrow */}
+                  <button onClick={() => scroll(1)} style={{
+                    position: 'absolute', right: -20, top: '45%', transform: 'translateY(-50%)',
+                    zIndex: 20, width: 44, height: 44, borderRadius: '50%',
+                    background: '#0f1e3d', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 6px 20px rgba(10,21,48,0.2)',
+                    opacity: canRight ? 1 : 0, pointerEvents: canRight ? 'auto' : 'none',
+                    transition: 'opacity .2s',
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  {/* Fade edges */}
+                  {canLeft && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 60, zIndex: 10, background: 'linear-gradient(90deg, var(--ivory,#faf7f2) 30%, transparent)', pointerEvents: 'none' }}/>}
+                  {canRight && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 80, zIndex: 10, background: 'linear-gradient(270deg, var(--ivory,#faf7f2) 30%, transparent)', pointerEvents: 'none' }}/>}
+
+                  <div
+                    ref={scrollRef}
+                    onScroll={onScroll}
+                    className="screens-row"
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(15,30,61,0.2) transparent' }}
+                  >
+                    {screens.map((s, i) => (
+                      <div className="screen-slot" key={i}>
+                        <IOSDevice {...deviceProps}>
+                          <div style={{ height: '100%', position: 'relative' }}>{s.inner}</div>
+                        </IOSDevice>
+                        <div className="screen-label"><b>{s.label}</b> · {s.tag}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Counter */}
+                  <div style={{ textAlign: 'right', marginTop: 10, fontSize: 11, color: 'var(--ink-400)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.06 }}>
+                    {screens.length} pantallas · desliza o usa las flechas →
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Section 2: Dashboard */}
+          {showDashboard && (
+            <div className="section">
+              <div className="section-head">
+                <span className="section-num">02</span>
+                <h2 className="section-title">Panel web de admin</h2>
+                <p className="section-desc">Donde llegan los reportes: cola de atención, mapa en vivo, métricas. Vive paralelo a la app.</p>
+              </div>
+              <div style={{ padding: '8px 0 0' }}>
+                <ChromeWindow width={1280} height={720} url="admin.reporteciudad.gob.mx" tabs={[{ title: 'ReporteCiudad · Admin' }, { title: 'Servicios Urbanos' }]} activeIndex={0}>
+                  <AdminDashboard dark={dark}/>
+                </ChromeWindow>
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Rubric */}
+          <div className="section">
+            <div className="section-head">
+              <span className="section-num">03</span>
+              <h2 className="section-title">Cumplimiento de rúbrica</h2>
+              <p className="section-desc">Cada criterio de la rúbrica UX/UI, con nota de cómo lo cumple el diseño propuesto.</p>
+            </div>
+            <RubricScreen dark={dark}/>
+          </div>
+
+          {/* Footer */}
+          <div style={{ textAlign: 'center', color: 'var(--ink-400)', fontSize: 12, marginTop: 48, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.05 }}>
+            ReporteCiudad · Prototipo IHC · v0.3
+          </div>
+
+          {/* Tweaks panel */}
+          <div className={`tweaks-panel ${tweaksOpen ? 'open' : ''}`}>
+            <div className="tweaks-title">Tweaks</div>
+            <div className="tweak-row">
+              <label>Tema</label>
+              <div className="seg">
+                <button className={!dark ? 'active' : ''} onClick={() => updateTheme('light')}>Claro</button>
+                <button className={dark ? 'active' : ''} onClick={() => updateTheme('dark')}>Oscuro</button>
+              </div>
+            </div>
+            <div className="tweak-row">
+              <label>Acento</label>
+              <div className="seg">
+                {Object.keys(accentMap).map(a => (
+                  <button key={a} className={accent === a ? 'active' : ''} onClick={() => updateAccent(a)}
+                    style={accent === a ? {} : {}}
+                  >
+                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 99, background: accentMap[a].c500, marginRight: 4, verticalAlign: 'middle' }}/>
+                    {a}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="tweak-row">
+              <label>Home</label>
+              <div className="seg">
+                <button className={homeView === 'map' ? 'active' : ''} onClick={() => updateView('map')}>Mapa</button>
+                <button className={homeView === 'list' ? 'active' : ''} onClick={() => updateView('list')}>Lista</button>
+              </div>
+            </div>
+            <div className="tweak-row">
+              <label>Dashboard</label>
+              <div className="seg">
+                <button className={showDashboard ? 'active' : ''} onClick={() => updateDash(true)}>Mostrar</button>
+                <button className={!showDashboard ? 'active' : ''} onClick={() => updateDash(false)}>Ocultar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
