@@ -4,7 +4,6 @@ import {
   RefreshControl, StyleSheet, Animated, Platform, StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
@@ -150,8 +149,8 @@ const pinStyles = StyleSheet.create({
 
 export default function ScreenHome() {
   const { colors, isDark, spacing, shadows } = useTheme();
-  const insets       = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
+  const [sheetBottom, setSheetBottom] = useState(0);
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
 
@@ -228,7 +227,14 @@ export default function ScreenHome() {
   const headerTop = insets.top + 8;
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.ivory }]}>
+    <View
+      style={[styles.root, { backgroundColor: colors.ivory }]}
+      onLayout={(e) => {
+        // Measure the content area height to calibrate the sheet position.
+        // The sheet sits 8px above the bottom of this view.
+        setSheetBottom(8);
+      }}
+    >
       <StatusBar barStyle="dark-content" />
 
       {/* ── Map ── */}
@@ -405,7 +411,7 @@ export default function ScreenHome() {
 
       {/* ── Bottom sheet preview ── */}
       {displayedReportes.length > 0 && view === 'map' && (
-        <View style={[styles.sheet, { backgroundColor: colors.paper, borderColor: colors.line, ...shadows.lg, bottom: tabBarHeight + 8 }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.paper, borderColor: colors.line, ...shadows.lg, bottom: sheetBottom }]}>
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetLabel, { color: colors.ink500 }]}>Cerca de ti</Text>
             <View style={[styles.sheetDivider, { backgroundColor: colors.line }]} />
