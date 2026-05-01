@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, Pressable, ScrollView, StyleSheet,
-  Animated, Platform, StatusBar,
+  View, Text, Pressable, ScrollView, FlatList, TextInput,
+  RefreshControl, StyleSheet, Animated, Platform, StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -15,6 +15,22 @@ import { useNotificaciones } from '@/src/hooks/useNotificaciones';
 import { useAnonId } from '@/src/hooks/useAnonId';
 import type { SeveridadReporte } from '@/src/types/database';
 import type { Reporte } from '@/src/hooks/useReportes';
+import type { Report } from '@/src/types/report';
+
+// ─── Mapper ───────────────────────────────────────────────────────────────────
+
+function toReport(r: Reporte): Report {
+  return {
+    id:       r.id,
+    type:     r.tipo,
+    title:    r.titulo,
+    location: r.descripcion ?? '—',
+    time:     new Date(r.creado_en).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+    severity: r.severidad,
+    votes:    r.votos,
+    status:   r.estado,
+  };
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -132,14 +148,28 @@ const pinStyles = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function ScreenHome() {
-  const { colors, spacing, shadows, radii } = useTheme();
+  const { colors, isDark, spacing, shadows } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
 
-  const [view,         setView]         = useState<'map' | 'list'>('map');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [userCoords,   setUserCoords]   = useState<{ lat: number; lng: number } | null>(null);
+  // Active state: navy bg + amber text in light; amber bg + navy text in dark.
+  const activeBg    = isDark ? colors.amber500  : colors.navy800;
+  const activeColor = isDark ? colors.navy900   : colors.amber500;
+  const [headerHeight, setHeaderHeight] = useState(240);
+
+  const [view,           setView]           = useState<'map' | 'list'>('map');
+  const [activeFilter,   setActiveFilter]   = useState('all');
+  const [userCoords,     setUserCoords]     = useState<{ lat: number; lng: number } | null>(null);
+  const [searchQuery,    setSearchQuery]    = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const handleSearch = useCallback((text: string) => {
+    setSearchQuery(text);
+    clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setDebouncedQuery(text), 300);
+  }, []);
 
   const { id: anonId } = useAnonId();
   const { unreadCount } = useNotificaciones(anonId);
@@ -168,13 +198,20 @@ export default function ScreenHome() {
     return {};
   }, [activeFilter, userCoords]);
 
-  const { data: reportes } = useReportes(queryFilters);
+  const { data: reportes, loading, refetch } = useReportes(queryFilters);
 
-  // Client-side "Hoy" filter
+  // Client-side "Hoy" + search filters
   const displayedReportes = useMemo(() => {
-    if (activeFilter !== 'today') return reportes;
-    return reportes.filter((r) => isToday(r.creado_en));
-  }, [reportes, activeFilter]);
+    let list = activeFilter === 'today' ? reportes.filter((r) => isToday(r.creado_en)) : reportes;
+    if (debouncedQuery.trim()) {
+      const q = debouncedQuery.toLowerCase();
+      list = list.filter((r) =>
+        r.titulo.toLowerCase().includes(q) ||
+        (r.descripcion ?? '').toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [reportes, activeFilter, debouncedQuery]);
 
   const handleLocate = useCallback(() => {
     if (!userCoords) return;
@@ -225,7 +262,10 @@ export default function ScreenHome() {
       </MapView>
 
       {/* ── Header overlay ── */}
-      <View style={[styles.headerOverlay, { paddingTop: headerTop, backgroundColor: colors.ivory + 'F0' }]}>
+      <View
+        style={[styles.headerOverlay, { paddingTop: headerTop, backgroundColor: colors.ivory + 'F0' }]}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
         <View style={styles.headerRow}>
           <View>
             <Text style={[styles.locationLabel, { color: colors.ink500 }]}>
@@ -260,9 +300,15 @@ export default function ScreenHome() {
             <Circle cx="11" cy="11" r="7" stroke={colors.ink500} strokeWidth={1.8} />
             <Path d="m20 20-4-4" stroke={colors.ink500} strokeWidth={1.8} strokeLinecap="round" />
           </Svg>
-          <Text style={[styles.searchPlaceholder, { color: colors.ink400 }]}>
-            Buscar calle, colonia, tipo…
-          </Text>
+          <TextInput
+            value={searchQuery}
+            onChangeText={handleSearch}
+            placeholder="Buscar calle, colonia, tipo…"
+            placeholderTextColor={colors.ink400}
+            style={[styles.searchInput, { color: colors.ink900 }]}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
           <View style={[styles.searchDivider, { backgroundColor: colors.line }]} />
           <View style={styles.searchFilter}>
             <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
@@ -274,34 +320,39 @@ export default function ScreenHome() {
           </View>
         </View>
 
-        {/* View toggle */}
-        <View style={[styles.toggle, { backgroundColor: colors.paper, borderColor: colors.line }]}>
-          {(['map', 'list'] as const).map((v) => {
-            const active = view === v;
-            return (
-              <Pressable
-                key={v}
-                onPress={() => setView(v)}
-                style={[styles.toggleBtn, active && { backgroundColor: colors.navy800 }]}
-              >
-                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-                  {v === 'map'
-                    ? <Path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" stroke={active ? colors.amber500 : colors.ink500} strokeWidth={2} strokeLinejoin="round" />
-                    : <Path d="M4 6h16M4 12h16M4 18h16" stroke={active ? colors.amber500 : colors.ink500} strokeWidth={2} strokeLinecap="round" />
-                  }
-                </Svg>
-                <Text style={[styles.toggleText, { color: active ? colors.amber500 : colors.ink500 }]}>
-                  {v === 'map' ? 'Mapa' : 'Lista'}
-                </Text>
-              </Pressable>
-            );
-          })}
+        {/* View toggle + filter chips — inside header so posición es exacta */}
+        <View style={styles.toggleRow}>
+          <View style={[styles.toggle, { backgroundColor: colors.paper, borderColor: colors.line }]}>
+            {(['map', 'list'] as const).map((v) => {
+              const active = view === v;
+              return (
+                <Pressable
+                  key={v}
+                  onPress={() => setView(v)}
+                  style={[styles.toggleBtn, active && { backgroundColor: activeBg }]}
+                >
+                  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                    {v === 'map'
+                      ? <Path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" stroke={active ? activeColor : colors.ink500} strokeWidth={2} strokeLinejoin="round" />
+                      : <Path d="M4 6h16M4 12h16M4 18h16" stroke={active ? activeColor : colors.ink500} strokeWidth={2} strokeLinecap="round" />
+                    }
+                  </Svg>
+                  <Text style={[styles.toggleText, { color: active ? activeColor : colors.ink500 }]}>
+                    {v === 'map' ? 'Mapa' : 'Lista'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
-      </View>
 
-      {/* ── Filter chips ── */}
-      <View style={styles.filtersWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+        {/* Filter chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+          style={styles.filtersScroll}
+        >
           {FILTERS.map((f) => {
             const active = activeFilter === f.key;
             return (
@@ -311,14 +362,14 @@ export default function ScreenHome() {
                 style={[
                   styles.chip,
                   active
-                    ? { backgroundColor: colors.navy800 }
+                    ? { backgroundColor: activeBg }
                     : { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.line },
                 ]}
               >
                 {f.severity && !active && (
                   <View style={[styles.chipDot, { backgroundColor: SEVERITY_COLOR[f.severity] }]} />
                 )}
-                <Text style={[styles.chipText, { color: active ? colors.amber500 : colors.ink700 }]}>
+                <Text style={[styles.chipText, { color: active ? activeColor : colors.ink700 }]}>
                   {f.label}
                 </Text>
               </Pressable>
@@ -358,16 +409,7 @@ export default function ScreenHome() {
             </Text>
           </View>
           <ReportRow
-            report={{
-              id:       displayedReportes[0].id,
-              type:     displayedReportes[0].tipo,
-              title:    displayedReportes[0].titulo,
-              location: displayedReportes[0].descripcion ?? '—',
-              time:     new Date(displayedReportes[0].creado_en).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-              severity: displayedReportes[0].severidad,
-              votes:    displayedReportes[0].votos,
-              status:   displayedReportes[0].estado,
-            }}
+            report={toReport(displayedReportes[0])}
             onPress={() => router.push(`/reporte/${displayedReportes[0].id}`)}
           />
         </View>
@@ -375,11 +417,38 @@ export default function ScreenHome() {
 
       {/* ── List view ── */}
       {view === 'list' && (
-        <View style={[styles.listOverlay, { backgroundColor: colors.ivory }]}>
-          <Text style={[styles.listPlaceholder, { color: colors.ink500 }]}>
-            Vista lista — issue 12
-          </Text>
-        </View>
+        <FlatList
+          data={displayedReportes}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingTop: headerHeight + 8, paddingBottom: 110 + insets.bottom },
+          ]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.ivory, zIndex: 25 }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refetch}
+              tintColor={colors.amber500}
+              colors={[colors.amber500]}
+            />
+          }
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyTitle, { color: colors.ink700 }]}>Sin reportes</Text>
+              <Text style={[styles.emptyBody, { color: colors.ink500 }]}>
+                No hay reportes con estos filtros.{'\n'}Prueba cambiando la búsqueda.
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <ReportRow
+              report={toReport(item)}
+              onPress={() => router.push(`/reporte/${item.id}`)}
+            />
+          )}
+        />
       )}
     </View>
   );
@@ -403,16 +472,17 @@ const styles = StyleSheet.create({
   bellDot: { position: 'absolute', top: 7, right: 7, width: 8, height: 8, borderRadius: 4, borderWidth: 2 },
 
   searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
-  searchPlaceholder: { fontFamily: 'Inter_400Regular', fontSize: 14, flex: 1 },
+  searchInput: { fontFamily: 'Inter_400Regular', fontSize: 14, flex: 1, paddingVertical: 0 },
   searchDivider: { width: 1, height: 16 },
   searchFilter: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   searchFilterText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
 
+  toggleRow: { marginBottom: 8 },
   toggle: { alignSelf: 'flex-start', flexDirection: 'row', borderWidth: 1, borderRadius: 10, padding: 3, gap: 2 },
   toggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 7 },
   toggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
 
-  filtersWrapper: { position: 'absolute', top: 210, left: 0, right: 0, zIndex: 20 },
+  filtersScroll: { marginHorizontal: -16 },
   filters: { paddingHorizontal: 16, gap: 6 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
   chipDot: { width: 6, height: 6, borderRadius: 3 },
@@ -427,6 +497,8 @@ const styles = StyleSheet.create({
   sheetDivider: { flex: 1, height: 1 },
   sheetMore: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
 
-  listOverlay: { position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', zIndex: 25 },
-  listPlaceholder: { fontFamily: 'Inter_400Regular', fontSize: 14 },
+  listContent: { paddingHorizontal: 12, gap: 0 },
+  emptyState:  { alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyTitle:  { fontFamily: 'InstrumentSerif_400Regular', fontSize: 22 },
+  emptyBody:   { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });
