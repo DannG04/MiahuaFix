@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import { ThemeProvider } from '@/src/theme/ThemeContext';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import {
@@ -40,13 +41,15 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
-    <Stack>
-      <Stack.Screen name="index"          options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)"         options={{ headerShown: false }} />
-      <Stack.Screen name="onboarding"     options={{ headerShown: false }} />
-      <Stack.Screen name="nuevo-reporte"  options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="reporte/[id]"   options={{ title: 'Detalle' }} />
-      <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
-    </Stack>
+    <ThemeProvider>
+      <Stack>
+        <Stack.Screen name="index"          options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)"         options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding"     options={{ headerShown: false }} />
+        <Stack.Screen name="nuevo-reporte"  options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="reporte/[id]"   options={{ title: 'Detalle' }} />
+        <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
+      </Stack>
+    </ThemeProvider>
   );
 }

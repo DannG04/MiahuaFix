@@ -1,10 +1,10 @@
-import { useColorScheme } from 'react-native';
 import { colors } from './colors';
 import type { ColorTokens } from './colors';
 import { spacing } from './spacing';
 import { radii } from './radii';
 import { shadows } from './shadows';
 import { typography } from './typography';
+import { useThemeContext } from './ThemeContext';
 
 export type Theme = {
   colors: ColorTokens;
@@ -16,8 +16,7 @@ export type Theme = {
 };
 
 export function useTheme(): Theme {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const { isDark } = useThemeContext();
   return {
     colors: isDark ? colors.dark : colors.light,
     spacing,
