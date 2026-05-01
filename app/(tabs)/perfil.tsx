@@ -74,6 +74,9 @@ function Row({ icon, label, detail, toggle, value, last, onPress, onToggle }: Ro
       onPress={toggle ? onToggle : onPress}
       disabled={!onPress && !onToggle}
       activeOpacity={0.7}
+      accessibilityRole={toggle ? 'switch' : 'button'}
+      accessibilityLabel={label}
+      accessibilityState={toggle ? { checked: !!value } : undefined}
       style={[
         styles.row,
         !last && { borderBottomWidth: 1, borderBottomColor: colors.line },
@@ -118,8 +121,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // ─── screen ────────────────────────────────────────────────────────
 
 export default function ScreenProfile() {
-  const { colors }         = useTheme();
-  const { isDark, toggleDark } = useThemeContext();
+  const { colors }              = useTheme();
+  const { isDark, mode, setMode } = useThemeContext();
   const insets             = useSafeAreaInsets();
   const { id, idShort, regenerate } = useAnonId();
 
@@ -214,8 +217,8 @@ export default function ScreenProfile() {
           icon={<MoonIcon color={colors.ink500} />}
           label="Modo oscuro"
           toggle
-          value={isDark}
-          onToggle={toggleDark}
+          value={mode === 'dark'}
+          onToggle={() => setMode(mode === 'dark' ? 'light' : 'dark')}
           last
         />
       </Section>

@@ -97,6 +97,9 @@ export default function ScreenNotifications() {
       <TouchableOpacity
         onPress={() => handlePress(item)}
         activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel={[item.title, item.description, timeAgo(item.created_at)].filter(Boolean).join('. ')}
+        accessibilityState={{ checked: item.leida }}
         style={[
           styles.item,
           index > 0 && { borderTopWidth: 1, borderTopColor: colors.line },
@@ -160,7 +163,14 @@ export default function ScreenNotifications() {
 
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.ivory }]}>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.paper, borderColor: colors.line }]} activeOpacity={0.8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={[styles.backBtn, { backgroundColor: colors.paper, borderColor: colors.line }]}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Volver"
+          hitSlop={8}
+        >
           <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
             <Path d="M19 12H5m6-6-6 6 6 6" stroke={colors.ink900} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
@@ -171,7 +181,13 @@ export default function ScreenNotifications() {
           <Text style={[styles.headline, { color: colors.ink900 }]}>Notificaciones</Text>
         </View>
 
-        <TouchableOpacity onPress={marcarTodasLeidas} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={marcarTodasLeidas}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Marcar todas como leídas"
+          hitSlop={8}
+        >
           <Text style={[styles.markRead, { color: colors.amber600 }]}>Marcar{'\n'}leídas</Text>
         </TouchableOpacity>
       </View>

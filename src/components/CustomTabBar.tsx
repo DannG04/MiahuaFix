@@ -125,9 +125,9 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
                 <View style={styles.fabHalo}>
                   <Pressable
                     onPress={handlePress}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: false }}
-                    accessibilityLabel={label}
+                    accessibilityRole="button"
+                    accessibilityLabel="Crear nuevo reporte"
+                    accessibilityHint="Abre el formulario de reporte"
                     style={({ pressed }) => [
                       styles.fab,
                       { backgroundColor: colors.amber500, opacity: pressed ? 0.88 : 1 },
@@ -175,6 +175,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     paddingVertical: 4,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   tabLabel: {
     fontFamily: 'Inter_600SemiBold',

@@ -35,10 +35,19 @@ export function ReportRow({ report, onPress, showVotes = true }: Props) {
   const typeColor = CATEGORY_COLOR[type];
   const typeLabel = CATEGORY_LABEL[type];
 
+  const a11yLabel = [
+    typeLabel,
+    title,
+    location,
+    `${votes} confirmaciones`,
+    time,
+  ].join(', ');
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
       style={({ pressed }) => [
         styles.card,
         { backgroundColor: colors.ivory, borderColor: colors.line, opacity: pressed ? 0.85 : 1 },

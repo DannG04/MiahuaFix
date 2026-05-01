@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { ThemeProvider } from '@/src/theme/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
+import { ThemeProvider, useThemeContext } from '@/src/theme/ThemeContext';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import {
@@ -20,6 +21,24 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 
 SplashScreen.preventAutoHideAsync();
+
+// Inner component so it can read ThemeContext after the provider mounts
+function ThemedStack() {
+  const { isDark } = useThemeContext();
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack>
+        <Stack.Screen name="index"          options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)"         options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding"     options={{ headerShown: false }} />
+        <Stack.Screen name="nuevo-reporte"  options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="reporte/[id]"   options={{ title: 'Detalle' }} />
+        <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
+      </Stack>
+    </>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -42,14 +61,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <Stack>
-        <Stack.Screen name="index"          options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)"         options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding"     options={{ headerShown: false }} />
-        <Stack.Screen name="nuevo-reporte"  options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="reporte/[id]"   options={{ title: 'Detalle' }} />
-        <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
-      </Stack>
+      <ThemedStack />
     </ThemeProvider>
   );
 }

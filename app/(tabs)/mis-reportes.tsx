@@ -159,6 +159,9 @@ export default function ScreenMine() {
               key={key}
               onPress={() => setActiveFilter(key)}
               activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={`${label}, ${count} reportes`}
+              accessibilityState={{ selected: active }}
               style={[
                 styles.chip,
                 active

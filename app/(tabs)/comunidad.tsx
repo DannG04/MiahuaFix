@@ -122,6 +122,8 @@ export default function ScreenFeed() {
             <View
               key={s.label}
               style={[styles.statCard, { backgroundColor: colors.paper, borderColor: colors.line }]}
+              accessibilityLabel={`${s.n} ${s.label}`}
+              accessible
             >
               <Text style={[styles.statN, { color: s.color }]}>{s.n}</Text>
               <Text style={[styles.statLabel, { color: colors.ink500 }]}>{s.label}</Text>
@@ -142,6 +144,9 @@ export default function ScreenFeed() {
                   { borderBottomColor: isActive ? colors.amber500 : 'transparent' },
                 ]}
                 activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityLabel={label}
+                accessibilityState={{ selected: isActive }}
               >
                 <Text style={[
                   styles.tabText,
@@ -179,7 +184,12 @@ export default function ScreenFeed() {
                   {section.subtitle}
                 </Text>
               </View>
-              <TouchableOpacity activeOpacity={0.7}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Ver todos los reportes de ${section.title}`}
+                hitSlop={8}
+              >
                 <Text style={[styles.verTodo, { color: colors.amber600 }]}>Ver todo</Text>
               </TouchableOpacity>
             </View>

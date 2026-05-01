@@ -165,7 +165,13 @@ export default function ScreenDetail() {
       {/* ── Hero foto ── */}
       <View style={styles.hero}>
         {data.foto_url ? (
-          <Image source={{ uri: data.foto_url }} style={styles.heroImg} resizeMode="cover" />
+          <Image
+            source={{ uri: data.foto_url }}
+            style={styles.heroImg}
+            resizeMode="cover"
+            accessibilityLabel={data.descripcion ? `Foto del reporte: ${data.descripcion}` : `Foto del reporte ${data.titulo}`}
+            accessibilityRole="image"
+          />
         ) : (
           <View style={[styles.heroImg, styles.heroPlaceholder, { backgroundColor: colors.paper }]}>
             <Text style={{ color: colors.ink400, fontFamily: 'Inter_400Regular', fontSize: 13 }}>
@@ -176,12 +182,26 @@ export default function ScreenDetail() {
 
         {/* Floating buttons */}
         <View style={[styles.heroButtons, { top: insets.top + 12 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.heroBtn} activeOpacity={0.85}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.heroBtn}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
+            hitSlop={8}
+          >
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path d="M19 12H5m6-6-6 6 6 6" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleShare} style={styles.heroBtn} activeOpacity={0.85}>
+          <TouchableOpacity
+            onPress={handleShare}
+            style={styles.heroBtn}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Compartir reporte"
+            hitSlop={8}
+          >
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M12 3v13m0-13-5 5m5-5 5 5" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
@@ -218,7 +238,7 @@ export default function ScreenDetail() {
         </View>
 
         {/* Title */}
-        <Text style={[styles.title, { color: colors.ink900 }]}>{data.titulo}</Text>
+        <Text accessibilityRole="header" style={[styles.title, { color: colors.ink900 }]}>{data.titulo}</Text>
 
         {/* Location + time */}
         <View style={styles.meta}>
@@ -249,6 +269,10 @@ export default function ScreenDetail() {
             onPress={handleConfirm}
             disabled={hasConfirmed || confirming}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={hasConfirmed ? 'Ya confirmaste este reporte' : 'Confirmar reporte'}
+            accessibilityHint={hasConfirmed ? undefined : 'Marca este reporte como visto para priorizarlo'}
+            accessibilityState={{ disabled: hasConfirmed || confirming, busy: confirming }}
             style={[
               styles.confirmBtn,
               { backgroundColor: colors.amber500, opacity: hasConfirmed ? 0.5 : 1 },
@@ -362,7 +386,13 @@ export default function ScreenDetail() {
                 <Text style={[styles.locationCoords, { color: colors.ink900 }]}>
                   {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
                 </Text>
-                <TouchableOpacity onPress={() => openInMaps(coords.lat, coords.lng)} activeOpacity={0.7}>
+                <TouchableOpacity
+                  onPress={() => openInMaps(coords.lat, coords.lng)}
+                  activeOpacity={0.7}
+                  accessibilityRole="link"
+                  accessibilityLabel="Abrir ubicación en mapa"
+                  hitSlop={8}
+                >
                   <Text style={[styles.openMapLink, { color: colors.amber600 }]}>Abrir en mapa →</Text>
                 </TouchableOpacity>
               </>
