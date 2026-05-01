@@ -15,6 +15,7 @@ const CATEGORY_COLOR: Record<Category, string> = {
   alumbrado: '#eab308',
   drenaje:   '#0891b2',
   grafiti:   '#db2777',
+  otro:      '#6b7280',
 };
 
 const CATEGORY_LABEL: Record<Category, string> = {
@@ -24,6 +25,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
   alumbrado: 'Alumbrado',
   drenaje:   'Drenaje',
   grafiti:   'Grafiti',
+  otro:      'Otro',
 };
 
 export function ReportRow({ report, onPress, showVotes = true }: Props) {

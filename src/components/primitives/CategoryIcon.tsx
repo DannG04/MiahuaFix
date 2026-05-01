@@ -47,11 +47,18 @@ export function CategoryIcon({ type, size = 22, color = 'currentColor' }: Props)
     </Svg>
   );
 
-  // grafiti
-  return (
+  if (type === 'grafiti') return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path d="M4 20h16M6 16l5-9 3 2-5 9H6v-2Z" {...stroke} />
       <Path d="M13 9l3-5 3 2-3 5" {...stroke} />
+    </Svg>
+  );
+
+  // otro — generic alert circle
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M12 9v4M12 17h.01" {...stroke} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" {...stroke} />
     </Svg>
   );
 }

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
-  View, Text, Pressable, Modal, ScrollView,
-  StyleSheet, SafeAreaView,
+  View, Text, Pressable, Modal, ScrollView, StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Path, Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
 import { useTheme } from '@/src/theme';

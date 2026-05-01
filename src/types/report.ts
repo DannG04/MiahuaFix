@@ -1,6 +1,6 @@
 export type Severity = 'low' | 'medium' | 'high';
 export type Status   = 'pending' | 'confirmed' | 'assigned' | 'resolved';
-export type Category = 'bache' | 'agua' | 'basura' | 'alumbrado' | 'drenaje' | 'grafiti';
+export type Category = 'bache' | 'agua' | 'basura' | 'alumbrado' | 'drenaje' | 'grafiti' | 'otro';
 
 export type Report = {
   id: string;
@@ -10,5 +10,5 @@ export type Report = {
   time: string;
   severity: Severity;
   votes: number;
-  status?: Status;
+  status?: Status | string;  // allows DB text values (e.g. 'pendiente')
 };
