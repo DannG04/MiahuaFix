@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useTheme } from '@/src/theme';
+import { haptic, setHapticsEnabled } from '@/src/lib/haptics';
 import { useThemeContext } from '@/src/theme/ThemeContext';
 import { useAnonId } from '@/src/hooks/useAnonId';
 import { AnonBadge } from '@/src/components/primitives';
@@ -126,10 +127,11 @@ export default function ScreenProfile() {
   const insets             = useSafeAreaInsets();
   const { id, idShort, regenerate } = useAnonId();
 
-  const [pushOn,    setPushOn]    = useState(true);
-  const [alertsOn,  setAlertsOn]  = useState(false);
-  const [summaryOn, setSummaryOn] = useState(false);
-  const [metaOn,    setMetaOn]    = useState(true);
+  const [pushOn,     setPushOn]     = useState(true);
+  const [alertsOn,   setAlertsOn]   = useState(false);
+  const [summaryOn,  setSummaryOn]  = useState(false);
+  const [hapticsOn,  setHapticsOn]  = useState(true);
+  const [metaOn,     setMetaOn]     = useState(true);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   // Load persisted prefs once
@@ -138,11 +140,14 @@ export default function ScreenProfile() {
       loadPref('push',    true),
       loadPref('alerts',  false),
       loadPref('summary', false),
+      loadPref('haptics', true),
       loadPref('meta',    true),
-    ]).then(([push, alerts, summary, meta]) => {
+    ]).then(([push, alerts, summary, haptics, meta]) => {
       setPushOn(push);
       setAlertsOn(alerts);
       setSummaryOn(summary);
+      setHapticsOn(haptics);
+      setHapticsEnabled(haptics);
       setMetaOn(meta);
       setPrefsLoaded(true);
     });
@@ -151,10 +156,13 @@ export default function ScreenProfile() {
   const toggle = useCallback((
     setter: React.Dispatch<React.SetStateAction<boolean>>,
     key: string,
+    onToggled?: (next: boolean) => void,
   ) => {
+    haptic.selection();
     setter(prev => {
       const next = !prev;
       savePref(key, next);
+      onToggled?.(next);
       return next;
     });
   }, []);
@@ -218,7 +226,7 @@ export default function ScreenProfile() {
           label="Modo oscuro"
           toggle
           value={mode === 'dark'}
-          onToggle={() => setMode(mode === 'dark' ? 'light' : 'dark')}
+          onToggle={() => { haptic.selection(); setMode(mode === 'dark' ? 'light' : 'dark'); }}
           last
         />
       </Section>
@@ -243,6 +251,13 @@ export default function ScreenProfile() {
           toggle
           value={summaryOn}
           onToggle={() => toggle(setSummaryOn, 'summary')}
+        />
+        <Row
+          icon={<HapticsIcon color={colors.ink500} />}
+          label="Hápticos"
+          toggle
+          value={hapticsOn}
+          onToggle={() => toggle(setHapticsOn, 'haptics', setHapticsEnabled)}
           last
         />
       </Section>
@@ -337,6 +352,12 @@ const QuestionIcon   = ({ color }: { color: string }) => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
     <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.7" />
     <Path d="M9 9a3 3 0 1 1 3 3v2M12 18v.01" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
+  </Svg>
+);
+const HapticsIcon     = ({ color }: { color: string }) => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+    <Path d="M5 9c0-3.3 3.1-6 7-6s7 2.7 7 6v6c0 3.3-3.1 6-7 6s-7-2.7-7-6V9Z" stroke={color} strokeWidth="1.7" />
+    <Path d="M12 8v4l2 2" stroke={color} strokeWidth="1.7" strokeLinecap="round" />
   </Svg>
 );
 const ShieldCheckIcon = ({ color }: { color: string }) => (

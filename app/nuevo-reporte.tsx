@@ -23,6 +23,7 @@ import { ReportSuccess } from '@/src/components/ReportSuccess';
 import { useTheme } from '@/src/theme';
 import { useAnonId } from '@/src/hooks/useAnonId';
 import { crearReporte } from '@/src/lib/api/reportes';
+import { haptic } from '@/src/lib/haptics';
 import type { Category, Severity } from '@/src/types/report';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -90,10 +91,12 @@ export default function NuevoReporte() {
   }
 
   function goNext() {
+    haptic.light();
     setStep((s) => { slideIn(1); return s + 1; });
   }
 
   function goBack() {
+    haptic.light();
     setStep((s) => { slideIn(-1); return s - 1; });
   }
 
@@ -134,6 +137,7 @@ export default function NuevoReporte() {
       slideIn(1);
       setStep(3);
     } catch (err: any) {
+      haptic.error();
       Alert.alert('Error al enviar', err.message ?? 'Ocurrió un error. Intenta de nuevo.');
     } finally {
       setEnviando(false);

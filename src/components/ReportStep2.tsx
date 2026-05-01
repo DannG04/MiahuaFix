@@ -1,6 +1,7 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '@/src/theme';
+import { haptic } from '@/src/lib/haptics';
 import type { Severity } from '@/src/types/report';
 
 type Props = {
@@ -26,6 +27,7 @@ export function ReportStep2({ severity, setSeverity, descripcion, setDescripcion
   const { colors } = useTheme();
 
   function toggleTag(tag: string) {
+    haptic.selection();
     if (tags.includes(tag)) {
       setTags(tags.filter(t => t !== tag));
     } else {
@@ -46,7 +48,7 @@ export function ReportStep2({ severity, setSeverity, descripcion, setDescripcion
         {SEVERITIES.map((s) => (
           <TouchableOpacity
             key={s.id}
-            onPress={() => setSeverity(s.id)}
+            onPress={() => { haptic.selection(); setSeverity(s.id); }}
             activeOpacity={0.85}
             style={[
               styles.severityCard,

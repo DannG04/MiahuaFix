@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { CategoryIcon } from '@/src/components/primitives';
 import { useTheme } from '@/src/theme';
+import { haptic } from '@/src/lib/haptics';
 import type { Category } from '@/src/types/report';
 
 type Props = {
@@ -31,7 +32,7 @@ export function ReportStep1({ selected, setSelected, onNext }: Props) {
         {TYPES.map((t) => (
           <TouchableOpacity
             key={t.id}
-            onPress={() => setSelected(t.id)}
+            onPress={() => { haptic.selection(); setSelected(t.id); }}
             activeOpacity={0.85}
             style={[
               styles.card,

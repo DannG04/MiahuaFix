@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { AnonBadge } from '@/src/components/primitives';
 import { useTheme } from '@/src/theme';
+import { haptic } from '@/src/lib/haptics';
 
 type Props = { reporteId: string };
 
@@ -13,6 +15,8 @@ function formatId(uuid: string) {
 export function ReportSuccess({ reporteId }: Props) {
   const router = useRouter();
   const { colors } = useTheme();
+
+  useEffect(() => { haptic.success(); }, []);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.ivory }]}>

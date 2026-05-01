@@ -1,13 +1,11 @@
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/src/lib/haptics';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useTheme } from '@/src/theme';
-
-const HAPTICS_ENABLED = true;
 
 // ─── Tab icons ────────────────────────────────────────────────────────────────
 
@@ -104,11 +102,11 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
 
           const handlePress = () => {
             if (isFab) {
-              if (HAPTICS_ENABLED) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              haptic.medium();
               router.push('/nuevo-reporte');
               return;
             }
-            if (HAPTICS_ENABLED) Haptics.selectionAsync();
+            haptic.selection();
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,

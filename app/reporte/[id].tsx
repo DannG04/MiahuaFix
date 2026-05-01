@@ -22,6 +22,7 @@ import { useAnonId } from '@/src/hooks/useAnonId';
 import { confirmarReporte } from '@/src/lib/api/reportes';
 import { useTheme } from '@/src/theme';
 import { parseLocation } from '@/src/lib/parseLocation';
+import { haptic } from '@/src/lib/haptics';
 import type { Category } from '@/src/types/report';
 
 // ─── helpers ───────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ export default function ScreenDetail() {
 
   async function handleConfirm() {
     if (!anonId || !id) return;
+    haptic.medium();
     setConfirming(true);
     try {
       await confirmarReporte({ reporteId: id, anonId });

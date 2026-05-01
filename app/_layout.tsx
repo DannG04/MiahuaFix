@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SecureStore from 'expo-secure-store';
 import { ThemeProvider, useThemeContext } from '@/src/theme/ThemeContext';
+import { setHapticsEnabled } from '@/src/lib/haptics';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import {
@@ -56,6 +58,12 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded || error) SplashScreen.hideAsync();
   }, [loaded, error]);
+
+  useEffect(() => {
+    SecureStore.getItemAsync('pref_haptics').then(v => {
+      if (v !== null) setHapticsEnabled(v === '1');
+    });
+  }, []);
 
   if (!loaded && !error) return null;
 
