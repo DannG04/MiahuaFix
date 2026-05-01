@@ -52,7 +52,7 @@ export function ReportStep2({ severity, setSeverity, descripcion, setDescripcion
               styles.severityCard,
               {
                 borderColor: severity === s.id ? s.color : colors.line,
-                borderWidth: severity === s.id ? 2 : 1,
+                borderWidth: 2,
                 backgroundColor: severity === s.id ? s.color + '12' : colors.ivory,
               },
             ]}
@@ -142,10 +142,10 @@ export function ReportStep2({ severity, setSeverity, descripcion, setDescripcion
           activeOpacity={0.85}
           style={[
             styles.nextBtn,
-            { backgroundColor: severity ? colors.navy800 : colors.line },
+            { backgroundColor: colors.navy900, opacity: severity ? 1 : 0.35 },
           ]}
         >
-          <Text style={[styles.nextBtnText, { color: severity ? colors.amber500 : colors.ink400 }]}>
+          <Text style={[styles.nextBtnText, { color: colors.amber500 }]}>
             Continuar
           </Text>
         </TouchableOpacity>

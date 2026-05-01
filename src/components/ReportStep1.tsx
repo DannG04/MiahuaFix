@@ -37,7 +37,7 @@ export function ReportStep1({ selected, setSelected, onNext }: Props) {
               styles.card,
               {
                 borderColor: selected === t.id ? t.color : colors.line,
-                borderWidth: selected === t.id ? 2 : 1,
+                borderWidth: 2,
                 backgroundColor: selected === t.id ? t.color + '10' : colors.ivory,
               },
             ]}
@@ -80,16 +80,16 @@ export function ReportStep1({ selected, setSelected, onNext }: Props) {
         activeOpacity={0.85}
         style={[
           styles.cta,
-          { backgroundColor: selected ? colors.navy800 : colors.line },
+          { backgroundColor: colors.navy900, opacity: selected ? 1 : 0.35 },
         ]}
       >
-        <Text style={[styles.ctaText, { color: selected ? colors.amber500 : colors.ink400 }]}>
+        <Text style={[styles.ctaText, { color: colors.amber500 }]}>
           Continuar
         </Text>
         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
           <Path
             d="M5 12h14m-6-6 6 6-6 6"
-            stroke={selected ? colors.amber500 : colors.ink400}
+            stroke={colors.amber500}
             strokeWidth={2.2}
             strokeLinecap="round"
             strokeLinejoin="round"

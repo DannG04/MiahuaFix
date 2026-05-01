@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -13,32 +13,76 @@ import {
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { AnonBadge } from '@/src/components/primitives';
 import { StepDots } from '@/src/components/StepDots';
 import { ReportStep1 } from '@/src/components/ReportStep1';
 import { ReportStep2 } from '@/src/components/ReportStep2';
+import { ReportStep3 } from '@/src/components/ReportStep3';
+import { ReportSuccess } from '@/src/components/ReportSuccess';
 import { useTheme } from '@/src/theme';
+import { useAnonId } from '@/src/hooks/useAnonId';
+import { crearReporte } from '@/src/lib/api/reportes';
 import type { Category, Severity } from '@/src/types/report';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const TOTAL_STEPS = 3;
 
+const TIPO_LABELS: Record<Category, string> = {
+  bache:     'Bache',
+  basura:    'Basura',
+  alumbrado: 'Alumbrado',
+  agua:      'Fuga de agua',
+  drenaje:   'Drenaje',
+  grafiti:   'Grafiti',
+  otro:      'Incidencia',
+};
+
+type Coords = { lat: number; lng: number };
+
 export default function NuevoReporte() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { id: anonId } = useAnonId();
 
+  // Wizard state
   const [step, setStep] = useState(0);
   const [tipo, setTipo] = useState<Category | null>(null);
   const [severidad, setSeveridad] = useState<Severity | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const [reporteId, setReporteId] = useState<string | null>(null);
 
-  const translateX = useSharedValue(SCREEN_W);
+  // Location
+  const [coords, setCoords] = useState<Coords | null>(null);
+  const [locLoading, setLocLoading] = useState(true);
+
+  // Submit
+  const [enviando, setEnviando] = useState(false);
+
+  // Slide animation
+  const translateX = useSharedValue(0);
   const direction = useRef(1);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocLoading(false);
+        return;
+      }
+      const { coords: c } = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setCoords({ lat: c.latitude, lng: c.longitude });
+      setLocLoading(false);
+    })();
+  }, []);
 
   function slideIn(dir: 1 | -1) {
     translateX.value = dir * SCREEN_W;
@@ -46,25 +90,15 @@ export default function NuevoReporte() {
   }
 
   function goNext() {
-    direction.current = 1;
-    setStep((s) => {
-      const next = s + 1;
-      slideIn(1);
-      return next;
-    });
+    setStep((s) => { slideIn(1); return s + 1; });
   }
 
   function goBack() {
-    direction.current = -1;
-    setStep((s) => {
-      const prev = s - 1;
-      slideIn(-1);
-      return prev;
-    });
+    setStep((s) => { slideIn(-1); return s - 1; });
   }
 
   function handleClose() {
-    const hasDatos = tipo || severidad || descripcion.trim() || tags.length > 0;
+    const hasDatos = tipo || severidad || descripcion.trim() || tags.length > 0 || fotoUri;
     if (hasDatos) {
       Alert.alert(
         'Descartar reporte',
@@ -79,7 +113,37 @@ export default function NuevoReporte() {
     }
   }
 
-  const stepLabels = ['Categoría', 'Detalles', 'Foto'];
+  async function handleSubmit() {
+    if (!tipo || !severidad || !fotoUri || !coords || !anonId) return;
+
+    const titulo = `${TIPO_LABELS[tipo]}${descripcion.trim() ? ' — ' + descripcion.trim().slice(0, 80) : ''}`;
+
+    setEnviando(true);
+    try {
+      const reporte = await crearReporte({
+        titulo,
+        tipo,
+        severidad,
+        descripcion: descripcion.trim() || undefined,
+        lat: coords.lat,
+        lng: coords.lng,
+        fotoUri,
+        anonId,
+      });
+      setReporteId(reporte.id);
+      slideIn(1);
+      setStep(3);
+    } catch (err: any) {
+      Alert.alert('Error al enviar', err.message ?? 'Ocurrió un error. Intenta de nuevo.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  // Success screen: full screen, no wizard chrome
+  if (step === 3 && reporteId) {
+    return <ReportSuccess reporteId={reporteId} />;
+  }
 
   return (
     <KeyboardAvoidingView
@@ -98,15 +162,13 @@ export default function NuevoReporte() {
             />
           </Svg>
         </TouchableOpacity>
-
         <Text style={[styles.stepTitle, { color: colors.ink700 }]}>
           Paso {step + 1} de {TOTAL_STEPS}
         </Text>
-
         <AnonBadge compact />
       </View>
 
-      {/* StepDots */}
+      {/* Progress */}
       <View style={styles.dotsWrap}>
         <StepDots step={step} total={TOTAL_STEPS} />
       </View>
@@ -138,13 +200,14 @@ export default function NuevoReporte() {
             />
           )}
           {step === 2 && (
-            <StepThreePlaceholder
+            <ReportStep3
+              fotoUri={fotoUri}
+              setFotoUri={setFotoUri}
+              coords={coords}
+              locLoading={locLoading}
+              enviando={enviando}
+              onSubmit={handleSubmit}
               onBack={goBack}
-              tipo={tipo}
-              severidad={severidad}
-              descripcion={descripcion}
-              tags={tags}
-              colors={colors}
             />
           )}
         </ScrollView>
@@ -153,61 +216,8 @@ export default function NuevoReporte() {
   );
 }
 
-function StepThreePlaceholder({
-  onBack,
-  tipo,
-  severidad,
-  descripcion,
-  tags,
-  colors,
-}: {
-  onBack: () => void;
-  tipo: Category | null;
-  severidad: Severity | null;
-  descripcion: string;
-  tags: string[];
-  colors: ReturnType<typeof useTheme>['colors'];
-}) {
-  return (
-    <View style={s3.container}>
-      <Text style={[s3.title, { color: colors.ink900 }]}>Foto y ubicación.</Text>
-      <Text style={[s3.subtitle, { color: colors.ink500 }]}>
-        Paso 3 — pendiente (issue #14).
-      </Text>
-      <View style={[s3.summaryBox, { backgroundColor: colors.paper, borderColor: colors.line }]}>
-        <Text style={[s3.summaryRow, { color: colors.ink700 }]}>Categoría: {tipo}</Text>
-        <Text style={[s3.summaryRow, { color: colors.ink700 }]}>Severidad: {severidad}</Text>
-        {descripcion ? (
-          <Text style={[s3.summaryRow, { color: colors.ink700 }]}>Descripción: {descripcion}</Text>
-        ) : null}
-        {tags.length > 0 ? (
-          <Text style={[s3.summaryRow, { color: colors.ink700 }]}>Tags: {tags.join(', ')}</Text>
-        ) : null}
-      </View>
-      <TouchableOpacity
-        onPress={onBack}
-        activeOpacity={0.85}
-        style={[s3.backBtn, { backgroundColor: colors.ivory, borderColor: colors.line }]}
-      >
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M19 12H5m6-6-6 6 6 6"
-            stroke={colors.ink900}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
-        <Text style={[s3.backText, { color: colors.ink700 }]}>Volver</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
+  root: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -240,44 +250,5 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
     flexGrow: 1,
-  },
-});
-
-const s3 = StyleSheet.create({
-  container: { flex: 1 },
-  title: {
-    fontFamily: 'InstrumentSerif_400Regular',
-    fontSize: 28,
-    lineHeight: 30,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    marginBottom: 24,
-  },
-  summaryBox: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
-    gap: 6,
-    marginBottom: 24,
-  },
-  summaryRow: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    justifyContent: 'center',
-  },
-  backText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 15,
   },
 });
